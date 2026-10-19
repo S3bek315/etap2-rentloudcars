@@ -4,14 +4,12 @@ require __DIR__ . '/../src/flota.php';
 
 $etykiety = ['suv' => 'SUV', 'sedan' => 'Sedan', 'coupe' => 'Coupe', 'tuned' => 'Tuned'];
 
-// Do każdego auta dokładamy zdjęcie, jeśli plik public/auta/<slug>.jpg istnieje.
 $auta = array_map(function (array $a): array {
     $plik = 'auta/' . $a['slug'] . '.jpg';
     $a['zdjecie'] = is_file(__DIR__ . '/' . $plik) ? $plik : null;
     return $a;
 }, flota());
 
-// Zakres suwaka mocy liczony z danych (zaokrąglony do 50 KM).
 $mocMin = (int) (floor(min(array_column($auta, 'moc')) / 50) * 50);
 $mocMax = (int) (ceil(max(array_column($auta, 'moc')) / 50) * 50);
 
@@ -20,7 +18,9 @@ render_naglowek('Garaż – RentLoudCars', 'garaz', ['garaz-style.css'], 'Samoch
     <main id="main">
 
         <section class="garage-hero">
-            <img src="garaz-hero.jpg" alt="Samochód sportowy do wynajęcia">
+<?php if (is_file(__DIR__ . '/garaz-hero.jpg')): ?>
+            <img src="garaz-hero.jpg" alt="" loading="eager">
+<?php endif; ?>
             <div class="wrap">
                 <h1>Garaż</h1>
                 <p class="lead">Samochody sportowe i tuningowane do wynajęcia. Ceny od 500 do 10 000 zł za dobę.</p>
@@ -52,17 +52,17 @@ render_naglowek('Garaż – RentLoudCars', 'garaz', ['garaz-style.css'], 'Samoch
                 <div class="cards" id="flota">
 <?php foreach ($auta as $a): ?>
                     <article class="card auto<?= $a['kat'] === 'tuned' ? ' tuned' : '' ?>" data-slug="<?= e($a['slug']) ?>" data-kat="<?= e($a['kat']) ?>" data-moc="<?= (int) $a['moc'] ?>" data-cena="<?= (int) $a['cena'] ?>">
-                        <div class="thumb">
+                        <div class="thumb<?= $a['zdjecie'] ? '' : ' brak' ?>">
 <?php if ($a['zdjecie']): ?>
                             <img src="<?= e($a['zdjecie']) ?>" alt="<?= e($a['nazwa']) ?>" loading="lazy">
 <?php else: ?>
-                            <span><?= e($a['nazwa']) ?></span>
+                            <span class="nazwa-auta"><?= e($a['nazwa']) ?></span>
 <?php endif; ?>
                             <span class="plakietka"><?= e($etykiety[$a['kat']]) ?></span>
                             <span class="skrot"><?= e($a['skrot']) ?></span>
                         </div>
                         <h3><button type="button" class="auto-open"><?= e($a['nazwa']) ?></button></h3>
-                        <p class="meta"><?= (int) $a['rok'] ?> · <?= e(moc_txt($a)) ?> KM · <?= e($a['silnik']) ?></p>
+                        <p class="meta"><?= (int) $a['rok'] ?> · <span class="moc"><?= e(moc_txt($a)) ?> KM</span> · <?= e($a['silnik']) ?></p>
                         <p class="price"><strong><?= number_format($a['cena'], 0, ',', "\u{00A0}") ?> zł</strong> / doba</p>
                         <div class="auto-foot">
                             <button type="button" class="btn small alt auto-open">Szczegóły</button>
@@ -75,7 +75,6 @@ render_naglowek('Garaż – RentLoudCars', 'garaz', ['garaz-style.css'], 'Samoch
             </div>
         </section>
 
-        <!-- Okno ze szczegółami auta (wypełniane przez garaz.js) -->
         <dialog id="auto-modal" aria-labelledby="m-nazwa">
             <div class="m-media" id="m-media"></div>
             <div class="m-body">

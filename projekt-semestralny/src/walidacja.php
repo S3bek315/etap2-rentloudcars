@@ -1,6 +1,5 @@
 <?php
-// Walidacja po stronie serwera. Każda funkcja zwraca treść błędu albo null, gdy dane są poprawne.
-// Te same funkcje są używane przy rejestracji i edycji profilu (bez powielania kodu).
+
 
 function blad_imienia(string $v, string $pole): ?string
 {
@@ -45,11 +44,29 @@ function blad_hasla(string $h): ?string
     if (strlen($h) < 8) {
         return 'Hasło musi mieć co najmniej 8 znaków.';
     }
-    if (strlen($h) > 72) {              // bcrypt uwzględnia maksymalnie 72 bajty
+    if (strlen($h) > 72) {             
         return 'Hasło może mieć maksymalnie 72 znaki.';
     }
     if (!preg_match('/\p{L}/u', $h) || !preg_match('/\d/', $h)) {
         return 'Hasło musi zawierać co najmniej jedną literę i jedną cyfrę.';
     }
     return null;
+}
+
+function bledy_danych_osobowych(array $dane): array
+{
+    return array_filter([
+        'imie'     => blad_imienia($dane['imie'], 'imię'),
+        'nazwisko' => blad_imienia($dane['nazwisko'], 'nazwisko'),
+        'telefon'  => blad_telefonu($dane['telefon']),
+    ]);
+}
+
+function bledy_nowego_hasla(string $haslo, string $powtorzenie, string $pole = 'haslo', string $poleDrugie = 'haslo2'): array
+{
+    $bledy = [$pole => blad_hasla($haslo)];
+    if ($bledy[$pole] === null && $haslo !== $powtorzenie) {
+        $bledy[$poleDrugie] = 'Hasła nie są takie same.';
+    }
+    return array_filter($bledy);
 }

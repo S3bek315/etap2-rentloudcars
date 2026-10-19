@@ -1,9 +1,6 @@
 <?php
 require __DIR__ . '/../src/bootstrap.php';
-
-if ($u = aktualny_uzytkownik()) {
-    redirect(panel_roli($u['rola']));
-}
+tylko_dla_gosci();
 
 $email = '';
 $blad  = '';
@@ -19,8 +16,8 @@ if (metoda_post()) {
     } else {
         $wynik = zaloguj($email, $haslo);
         if (!empty($wynik['ok'])) {
-            flash('ok', 'Zalogowano pomyślnie. Witaj, ' . $_SESSION['imie'] . '!');
-            redirect(panel_roli($wynik['rola']));   // każda rola trafia do swojego panelu
+            flash('ok', 'Zalogowano pomyślnie. Witaj, ' . $wynik['imie'] . '!');
+            redirect(panel_roli($wynik['rola']));  
         }
         $blad = $wynik['blad'];
     }
@@ -40,6 +37,7 @@ render_naglowek('Logowanie – RentLoudCars', 'logowanie');
                 <?php pole('haslo', 'Hasło', 'password', '', null, 'required autocomplete="current-password"'); ?>
                 <button type="submit" class="btn">Zaloguj się</button>
             </form>
+            <p class="auth-alt"><a href="reset-hasla.php">Nie pamiętasz hasła?</a></p>
             <p class="auth-alt">Nie masz konta? <a href="rejestracja.php">Zarejestruj się</a></p>
         </div>
     </main>

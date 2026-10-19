@@ -1,13 +1,9 @@
 <?php
 require __DIR__ . '/../src/bootstrap.php';
+tylko_dla_gosci();   
 
-// Zalogowany użytkownik nie potrzebuje rejestracji.
-if ($u = aktualny_uzytkownik()) {
-    redirect(panel_roli($u['rola']));
-}
-
-$dane   = ['imie' => '', 'nazwisko' => '', 'email' => '', 'telefon' => ''];
-$bledy  = [];
+$dane  = ['imie' => '', 'nazwisko' => '', 'email' => '', 'telefon' => ''];
+$bledy = [];
 
 if (metoda_post()) {
     if (!csrf_sprawdz()) {
@@ -19,34 +15,21 @@ if (metoda_post()) {
         $haslo  = post('haslo', false);
         $haslo2 = post('haslo2', false);
 
-        // Walidacja po stronie serwera (JavaScript tu nie wystarcza, bo można go ominąć).
-        $bledy['imie']     = blad_imienia($dane['imie'], 'imię');
-        $bledy['nazwisko'] = blad_imienia($dane['nazwisko'], 'nazwisko');
-        $bledy['email']    = blad_emaila($dane['email']);
-        $bledy['telefon']  = blad_telefonu($dane['telefon']);
-        $bledy['haslo']    = blad_hasla($haslo);
-        if ($bledy['haslo'] === null && $haslo !== $haslo2) {
-            $bledy['haslo2'] = 'Hasła nie są takie same.';
+        $bledy = bledy_danych_osobowych($dane) + bledy_nowego_hasla($haslo, $haslo2);
+        if ($e = blad_emaila($dane['email'])) {
+            $bledy['email'] = $e;
         }
-        $bledy = array_filter($bledy);   // zostają tylko pola z błędem
 
-        // Unikalność e-maila (kolacja bazy nie rozróżnia wielkości liter).
-        if (!$bledy) {
-            $st = db()->prepare('SELECT 1 FROM uzytkownicy WHERE email = ?');
-            $st->execute([$dane['email']]);
-            if ($st->fetch()) {
-                $bledy['email'] = 'Konto z tym adresem e-mail już istnieje.';
-            }
+        if (!$bledy && db_wartosc('SELECT 1 FROM uzytkownicy WHERE email = ?', [$dane['email']])) {
+            $bledy['email'] = 'Konto z tym adresem e-mail już istnieje.';
         }
 
         if (!$bledy) {
             try {
-                // Rola zawsze „klient”: nigdy nie bierzemy jej z formularza.
-                $st = db()->prepare(
+                db()->prepare(
                     'INSERT INTO uzytkownicy (imie, nazwisko, email, haslo, numer_telefonu, rola)
                      VALUES (?, ?, ?, ?, ?, ?)'
-                );
-                $st->execute([
+                )->execute([
                     $dane['imie'],
                     $dane['nazwisko'],
                     strtolower($dane['email']),
@@ -57,7 +40,6 @@ if (metoda_post()) {
                 flash('ok', 'Konto zostało utworzone. Możesz się teraz zalogować.');
                 redirect('logowanie.php');
             } catch (PDOException $ex) {
-                // 23000 = naruszenie UNIQUE (ktoś zarejestrował ten e-mail chwilę wcześniej).
                 if ($ex->getCode() === '23000') {
                     $bledy['email'] = 'Konto z tym adresem e-mail już istnieje.';
                 } else {
@@ -76,7 +58,7 @@ render_naglowek('Rejestracja – RentLoudCars', 'rejestracja', [], 'Załóż kon
             <form method="post" action="rejestracja.php" novalidate>
                 <?= csrf_pole() ?>
 <?php if (!empty($bledy['ogolny'])): ?>
-                <p class="komunikat komunikat-err"><?= e($bledy['ogolny']) ?></p>
+                <p class="komunikat komunikat-err" role="alert"><?= e($bledy['ogolny']) ?></p>
 <?php endif; ?>
                 <div class="grid2">
                     <?php pole('imie', 'Imię', 'text', $dane['imie'], $bledy['imie'] ?? null, 'required maxlength="40" autocomplete="given-name"'); ?>

@@ -438,7 +438,6 @@ textarea:focus {
   }
 }
 
-/* ===== Etap 2: konta, logowanie, panele ===== */
 nav form { background: none; padding: 0; display: inline; }
 .btn-link {
   background: none;
@@ -474,3 +473,5 @@ nav form { background: none; padding: 0; display: inline; }
 .stat strong { display: block; font-family: var(--head); font-size: 2.6rem; font-weight: 400; }
 .stat ul { padding-left: 18px; margin: 0 0 1em; }
 
+.btn.alt { background: transparent; color: var(--ink); border: 2px solid var(--ink); }
+.btn.alt:hover { background: var(--ink); color: #fff; }

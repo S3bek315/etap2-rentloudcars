@@ -1,5 +1,4 @@
 <?php
-// Wspólny układ strony: nagłówek z nawigacją (zależną od logowania), stopka i pole formularza.
 
 function render_naglowek(string $tytul, string $aktywna = '', array $css = [], string $opis = ''): void
 {
@@ -86,15 +85,15 @@ function render_stopka(): void
 <?php
 }
 
-// Jedno pole formularza z etykietą i komunikatem błędu. $atrybuty to stały tekst z kodu (nigdy dane od użytkownika).
+
 function pole(string $nazwa, string $etykieta, string $typ = 'text', string $wartosc = '', ?string $blad = null, string $atrybuty = ''): void
 {
     $id = 'f-' . $nazwa;
     echo '<div class="row"><label for="' . $id . '">' . e($etykieta) . '</label>';
     echo '<input id="' . $id . '" name="' . e($nazwa) . '" type="' . e($typ) . '" value="' . e($wartosc) . '"'
-       . ($blad ? ' class="invalid"' : '') . ' ' . $atrybuty . '>';
+       . ($blad ? ' class="invalid" aria-invalid="true" aria-describedby="' . $id . '-blad"' : '') . ' ' . $atrybuty . '>';
     if ($blad) {
-        echo '<p class="err">' . e($blad) . '</p>';
+        echo '<p class="err" id="' . $id . '-blad">' . e($blad) . '</p>';
     }
     echo '</div>';
 }

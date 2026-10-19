@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/../src/bootstrap.php';
-$u = wymagaj_roli('klient');   // tylko klient; pracownik i administrator dostaną 403
+$u = wymagaj_roli('klient');   
 
 render_naglowek('Panel klienta – RentLoudCars', 'panel');
 ?>

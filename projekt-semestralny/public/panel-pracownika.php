@@ -1,8 +1,7 @@
 <?php
 require __DIR__ . '/../src/bootstrap.php';
-$u = wymagaj_roli('pracownik');   // tylko pracownik
+$u = wymagaj_roli('pracownik');   
 
-// Dane stanowiska i przypisane usługi (relacja N:M przez uslugi_pracownikow).
 $st = db()->prepare('SELECT id, opis FROM pracownicy WHERE id_uzytkownika = ? AND aktywne = 1');
 $st->execute([$u['id']]);
 $pracownik = $st->fetch();

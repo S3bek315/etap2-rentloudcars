@@ -17,7 +17,18 @@ CREATE TABLE uzytkownicy (
     aktywne BOOLEAN NOT NULL DEFAULT TRUE,
     nieudane_proby TINYINT UNSIGNED NOT NULL DEFAULT 0,
     zablokowany_do DATETIME NULL,
+    wersja_sesji INT NOT NULL DEFAULT 1,
     stworzony TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE tokeny_hasla (
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    id_uzytkownika INT NOT NULL,
+    token_hash CHAR(64) NOT NULL UNIQUE,
+    wazny_do DATETIME NOT NULL,
+    utworzony DATETIME NOT NULL,
+
+    FOREIGN KEY (id_uzytkownika) REFERENCES uzytkownicy(id) ON DELETE CASCADE
 );
 
 CREATE TABLE kategorie_uslug (

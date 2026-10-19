@@ -1,6 +1,6 @@
 <?php
-// Wspólny start każdej strony: konfiguracja, obsługa błędów, sesja i funkcje pomocnicze.
 
+date_default_timezone_set('Europe/Warsaw');  
 $plikConfig = __DIR__ . '/config.php';
 if (!is_file($plikConfig)) {
     http_response_code(500);
@@ -10,32 +10,44 @@ $GLOBALS['config'] = require $plikConfig;
 
 error_reporting(E_ALL);
 ini_set('display_errors', !empty($GLOBALS['config']['debug']) ? '1' : '0');
+ini_set('zend.exception_ignore_args', '1'); 
 
 require __DIR__ . '/pomocnicze.php';
 require __DIR__ . '/db.php';
 require __DIR__ . '/walidacja.php';
 require __DIR__ . '/auth.php';
+require __DIR__ . '/mail.php';
+require __DIR__ . '/reset.php';
 require __DIR__ . '/layout.php';
 
-// Użytkownik nie widzi szczegółów technicznych, błąd trafia tylko do logu serwera.
 set_exception_handler(function (Throwable $ex) {
     error_log((string) $ex);
     http_response_code(500);
-    echo '<!DOCTYPE html><html lang="pl"><head><meta charset="UTF-8"><title>Błąd</title></head>'
-       . '<body style="font-family:sans-serif;padding:40px"><h1>Coś poszło nie tak</h1>'
-       . '<p>Spróbuj ponownie za chwilę.</p><p><a href="Strona-glowna.php">Wróć na stronę główną</a></p>';
+    echo '<!DOCTYPE html><html lang="pl"><head><meta charset="UTF-8">'
+       . '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
+       . '<title>Błąd – RentLoudCars</title><link rel="stylesheet" href="style.css"></head>'
+       . '<body><main class="block"><div class="wrap auth-card"><h1>Coś poszło nie tak</h1>'
+       . '<p>Spróbuj ponownie za chwilę.</p>'
+       . '<p><a class="btn" href="Strona-glowna.php">Wróć na stronę główną</a></p>';
     if (!empty($GLOBALS['config']['debug'])) {
         echo '<pre>' . e((string) $ex) . '</pre>';
     }
-    echo '</body></html>';
+    echo '</div></main></body></html>';
 });
 
-header('Cache-Control: no-store, max-age=0');   // po wylogowaniu przycisk „Wstecz” nie pokaże panelu
+
+header('Cache-Control: no-store, max-age=0');  
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
+header('Referrer-Policy: strict-origin-when-cross-origin');
 
-// Bezpieczna sesja: ciasteczko niedostępne dla JavaScriptu, tylko przez własną domenę.
+header("Content-Security-Policy: default-src 'self'; script-src 'self'; "
+     . "style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; "
+     . "img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+
+
 $https = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+session_name('rentloudcars');
 session_set_cookie_params([
     'lifetime' => 0,
     'path'     => '/',
@@ -47,7 +59,6 @@ ini_set('session.use_strict_mode', '1');
 ini_set('session.use_only_cookies', '1');
 session_start();
 
-// Wygaśnięcie sesji po bezczynności.
 if (isset($_SESSION['uid'])) {
     if (time() - ($_SESSION['ostatnia'] ?? 0) > SESJA_CZAS) {
         wyczysc_sesje();

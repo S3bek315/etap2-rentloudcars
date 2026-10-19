@@ -1,2 +1,3 @@
-# dane dostępowe do bazy (nie wrzucamy haseł do repozytorium)
 src/config.php
+storage/*.log
+*.sqlite

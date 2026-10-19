@@ -1,12 +1,8 @@
 <?php
-// Lista aut pokazywana w Garażu. Żeby dodać auto, dopisz kolejny wpis w tej tablicy.
-// kat: suv | sedan | coupe | tuned   (plus => true pokazuje moc jako np. "900+ KM")
-// Zdjęcie jest opcjonalne: wrzuć plik public/auta/<slug>.jpg, a strona sama go użyje.
 
 function flota(): array
 {
     return [
-        // ---------- SEDAN ----------
         ['slug' => 'bmw-m3-competition', 'nazwa' => 'BMW M3 Competition', 'rok' => 2023, 'kat' => 'sedan',
          'moc' => 510, 'silnik' => '3.0 R6 biturbo', 'naped' => 'Tylny', 'przysp' => 3.5, 'cena' => 990,
          'skrot' => 'Sedan na co dzień, a na torze zamienia się w bestię.',
@@ -24,7 +20,6 @@ function flota(): array
          'skrot' => 'Amerykański V8 z kompresorem, słychać go z dwóch ulic dalej.',
          'opis' => 'Wielki sedan z kompresorem, który wyje jak turbina. Mocny, cięższy i bardziej surowy niż niemieccy rywale, ale właśnie za to go lubimy. Jeśli chcesz auta z prawdziwym amerykańskim charakterem, to jest ono dla Ciebie.'],
 
-        // ---------- SUV ----------
         ['slug' => 'bmw-x5-m-competition', 'nazwa' => 'BMW X5 M Competition', 'rok' => 2022, 'kat' => 'suv',
          'moc' => 625, 'silnik' => '4.4 V8 biturbo', 'naped' => '4x4', 'przysp' => 3.8, 'cena' => 1500,
          'skrot' => 'Rodzinny SUV, który zostawi większość sportowych aut z tyłu.',
@@ -42,7 +37,6 @@ function flota(): array
          'skrot' => 'Supersamochód w ciele SUV-a, widać go z daleka.',
          'opis' => 'Urus łączy praktyczność SUV-a z charakterem Lamborghini. Wchodzi się do niego jak do kokpitu, a pod maską pracuje głośne V8. Na wesele, sesję zdjęciową albo po prostu żeby poczuć się wyjątkowo.'],
 
-        // ---------- COUPE ----------
         ['slug' => 'ford-mustang-gt', 'nazwa' => 'Ford Mustang GT', 'rok' => 2021, 'kat' => 'coupe',
          'moc' => 450, 'silnik' => '5.0 V8', 'naped' => 'Tylny', 'przysp' => 4.3, 'cena' => 690,
          'skrot' => 'Klasyczne V8 i dźwięk, który kojarzy się z amerykańską niedzielą.',
@@ -64,7 +58,6 @@ function flota(): array
          'skrot' => 'Flagowiec floty: 830 KM i hybrydowy napęd.',
          'opis' => 'Najszybsze i najdroższe auto w naszym garażu. Połączenie V6 i silnika elektrycznego daje błyskawiczną reakcję na gaz. Wynajem tylko dla doświadczonych kierowców, ale wrażenia są niepowtarzalne.'],
 
-        // ---------- TUNED ----------
         ['slug' => 'bmw-m3-stage3', 'nazwa' => 'BMW M3 Competition Stage 3', 'rok' => 2023, 'kat' => 'tuned',
          'moc' => 900, 'plus' => true, 'silnik' => '3.0 R6 biturbo (większe turbiny)', 'naped' => 'Tylny', 'przysp' => 2.8, 'cena' => 3500,
          'skrot' => 'M3 po tuningu: ponad 900 KM, strzały z wydechu i dźwięk, którego nie zapomnisz.',
@@ -92,7 +85,6 @@ function flota(): array
     ];
 }
 
-// Moc do wyświetlenia, np. "510" albo "900+".
 function moc_txt(array $a): string
 {
     return $a['moc'] . (!empty($a['plus']) ? '+' : '');

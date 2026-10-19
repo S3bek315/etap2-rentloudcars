@@ -1,13 +1,12 @@
 <?php
 require __DIR__ . '/../src/bootstrap.php';
-$u = wymagaj_roli('administrator');   // tylko administrator
+$u = wymagaj_roli('administrator');  
 
-// Proste statystyki z bazy (zapytania bez danych od użytkownika, więc bez parametrów).
 $stat = [
-    'Klienci'    => (int) db()->query("SELECT COUNT(*) FROM uzytkownicy WHERE rola = 'klient'")->fetchColumn(),
-    'Pracownicy' => (int) db()->query("SELECT COUNT(*) FROM uzytkownicy WHERE rola = 'pracownik'")->fetchColumn(),
-    'Usługi'     => (int) db()->query('SELECT COUNT(*) FROM uslugi')->fetchColumn(),
-    'Rezerwacje' => (int) db()->query('SELECT COUNT(*) FROM rezerwacje')->fetchColumn(),
+    'Klienci'    => (int) db_wartosc('SELECT COUNT(*) FROM uzytkownicy WHERE rola = ?', ['klient']),
+    'Pracownicy' => (int) db_wartosc('SELECT COUNT(*) FROM uzytkownicy WHERE rola = ?', ['pracownik']),
+    'Usługi'     => (int) db_wartosc('SELECT COUNT(*) FROM uslugi'),
+    'Rezerwacje' => (int) db_wartosc('SELECT COUNT(*) FROM rezerwacje'),
 ];
 
 render_naglowek('Panel administratora – RentLoudCars', 'panel');

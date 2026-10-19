@@ -1,4 +1,3 @@
-// Garaż: filtrowanie po kategorii i mocy, sortowanie oraz okno ze szczegółami auta.
 (() => {
   const lista = document.getElementById('flota');
   if (!lista) return;
@@ -45,7 +44,6 @@
   sortSel.addEventListener('change', odswiez);
   odswiez();
 
-  // ----- okno szczegółów -----
   const modal = document.getElementById('auto-modal');
   const NAZWY_KAT = { suv: 'SUV', sedan: 'Sedan', coupe: 'Coupe', tuned: 'Tuned' };
   const el = id => document.getElementById(id);
@@ -91,13 +89,12 @@
     modal.showModal();
   }
 
-  // Kliknięcie w kartę otwiera szczegóły (poza przyciskiem „Rezerwuj”).
   lista.addEventListener('click', e => {
     if (e.target.closest('a')) return;
     const karta = e.target.closest('.auto');
     if (karta) otworz(karta.dataset.slug);
   });
-  modal.addEventListener('click', e => { if (e.target === modal) modal.close(); });   // klik w tło
+  modal.addEventListener('click', e => { if (e.target === modal) modal.close(); });  
   modal.querySelector('.m-close').addEventListener('click', () => modal.close());
   modal.addEventListener('close', () => { document.body.style.overflow = ''; });
 })();

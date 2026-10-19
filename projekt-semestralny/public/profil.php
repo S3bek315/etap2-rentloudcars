@@ -1,10 +1,10 @@
 <?php
 require __DIR__ . '/../src/bootstrap.php';
-$u = wymagaj_logowania();   // dostępne dla każdej roli, ale każdy edytuje wyłącznie własne dane
+$u = wymagaj_logowania();  
 
-$dane    = ['imie' => $u['imie'], 'nazwisko' => $u['nazwisko'], 'telefon' => $u['numer_telefonu']];
-$bledyD  = [];   // błędy formularza danych
-$bledyH  = [];   // błędy formularza zmiany hasła
+$dane   = ['imie' => $u['imie'], 'nazwisko' => $u['nazwisko'], 'telefon' => $u['numer_telefonu']];
+$bledyD = [];   
+$bledyH = [];   
 
 if (metoda_post()) {
     if (!csrf_sprawdz()) {
@@ -17,13 +17,8 @@ if (metoda_post()) {
         foreach ($dane as $klucz => $_) {
             $dane[$klucz] = post($klucz);
         }
-        $bledyD = array_filter([
-            'imie'     => blad_imienia($dane['imie'], 'imię'),
-            'nazwisko' => blad_imienia($dane['nazwisko'], 'nazwisko'),
-            'telefon'  => blad_telefonu($dane['telefon']),
-        ]);
+        $bledyD = bledy_danych_osobowych($dane);
         if (!$bledyD) {
-            // Warunek WHERE id = ? z sesji: użytkownik zmienia tylko swoje konto, rolę i e-mail pomijamy.
             db()->prepare('UPDATE uzytkownicy SET imie = ?, nazwisko = ?, numer_telefonu = ? WHERE id = ?')
                 ->execute([$dane['imie'], $dane['nazwisko'], normalizuj_telefon($dane['telefon']), $u['id']]);
             flash('ok', 'Dane zostały zapisane.');
@@ -34,25 +29,22 @@ if (metoda_post()) {
         $nowe  = post('nowe', false);
         $nowe2 = post('nowe2', false);
 
-        $st = db()->prepare('SELECT haslo FROM uzytkownicy WHERE id = ?');
-        $st->execute([$u['id']]);
-        $hash = (string) $st->fetchColumn();
-
+        $hash = (string) db_wartosc('SELECT haslo FROM uzytkownicy WHERE id = ?', [$u['id']]);
         if (!password_verify($stare, $hash)) {
             $bledyH['stare'] = 'Obecne hasło jest nieprawidłowe.';
         }
-        $bledyH['nowe'] = blad_hasla($nowe);
-        if ($bledyH['nowe'] === null && $nowe !== $nowe2) {
-            $bledyH['nowe2'] = 'Hasła nie są takie same.';
-        }
-        $bledyH = array_filter($bledyH);
+        $bledyH += bledy_nowego_hasla($nowe, $nowe2, 'nowe', 'nowe2');
         if (!$bledyH) {
-            db()->prepare('UPDATE uzytkownicy SET haslo = ? WHERE id = ?')
-                ->execute([password_hash($nowe, PASSWORD_DEFAULT), $u['id']]);
+            $_SESSION['wersja'] = zmien_haslo((int) $u['id'], $nowe);
             session_regenerate_id(true);
-            flash('ok', 'Hasło zostało zmienione.');
+            flash('ok', 'Hasło zostało zmienione. Inne urządzenia zostały wylogowane.');
             redirect('profil.php');
         }
+    } elseif ($akcja === 'wyloguj_wszedzie') {
+        $_SESSION['wersja'] = uniewaznij_sesje((int) $u['id']);
+        session_regenerate_id(true);
+        flash('ok', 'Wylogowano ze wszystkich innych urządzeń.');
+        redirect('profil.php');
     }
 }
 
@@ -85,6 +77,14 @@ render_naglowek('Profil – RentLoudCars', 'profil');
                     <?php pole('nowe2', 'Powtórz nowe hasło', 'password', '', $bledyH['nowe2'] ?? null, 'required autocomplete="new-password"'); ?>
                 </div>
                 <button type="submit" class="btn">Zmień hasło</button>
+            </form>
+
+            <h2 class="odstep">Bezpieczeństwo konta</h2>
+            <form method="post" action="profil.php">
+                <?= csrf_pole() ?>
+                <input type="hidden" name="akcja" value="wyloguj_wszedzie">
+                <p class="hint">Jeśli logowałeś się na cudzym komputerze, możesz wylogować wszystkie inne urządzenia. Ta sesja zostanie aktywna.</p>
+                <button type="submit" class="btn alt">Wyloguj z innych urządzeń</button>
             </form>
         </div>
     </main>

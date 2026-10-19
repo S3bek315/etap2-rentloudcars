@@ -1,12 +1,9 @@
 <?php
-// Uwierzytelnianie, sesje, role i kontrola dostępu.
 
-const MAX_PROB   = 5;     // tyle błędnych haseł blokuje konto
-const BLOKADA_MIN = 15;   // na tyle minut
-const SESJA_CZAS = 1800;  // wylogowanie po 30 minutach bezczynności
+const MAX_PROB    = 5;    
+const BLOKADA_MIN = 15;    
+const SESJA_CZAS  = 1800;  
 
-// Atrapa hasha: porównujemy z nią, gdy e-maila nie ma w bazie,
-// żeby czas odpowiedzi nie zdradzał, czy konto istnieje.
 const DUMMY_HASH = '$2y$10$gpKoVlT3.th9OqILInd6KuewTmI/2jIBj52IEWqE55s6ITjiZ/tGm';
 
 function panel_roli(string $rola): string
@@ -18,16 +15,12 @@ function panel_roli(string $rola): string
     };
 }
 
-// Czyści dane sesji i nadaje nowy identyfikator (stary przestaje działać).
 function wyczysc_sesje(): void
 {
     $_SESSION = [];
     session_regenerate_id(true);
 }
 
-// Zwraca zalogowanego użytkownika z bazy albo null.
-// Przy każdym żądaniu sprawdzamy w bazie, czy konto nadal istnieje i jest aktywne,
-// a rola pochodzi z bazy, nie z danych, które można podrobić.
 function aktualny_uzytkownik(): ?array
 {
     static $u = false;
@@ -37,7 +30,7 @@ function aktualny_uzytkownik(): ?array
     $u = null;
     if (!empty($_SESSION['uid'])) {
         $st = db()->prepare(
-            'SELECT id, imie, nazwisko, email, numer_telefonu, rola
+            'SELECT id, imie, nazwisko, email, numer_telefonu, rola, wersja_sesji
              FROM uzytkownicy WHERE id = ? AND aktywne = 1'
         );
         $st->execute([$_SESSION['uid']]);
@@ -45,6 +38,10 @@ function aktualny_uzytkownik(): ?array
         if ($u === null) {
             wyczysc_sesje();
             flash('err', 'Twoje konto jest nieaktywne lub nie istnieje.');
+        } elseif ((int) $u['wersja_sesji'] !== (int) ($_SESSION['wersja'] ?? -1)) {
+            $u = null;
+            wyczysc_sesje();
+            flash('err', 'Zostałeś wylogowany, bo zmieniono hasło lub wylogowano Cię ze wszystkich urządzeń. Zaloguj się ponownie.');
         } else {
             $_SESSION['rola']     = $u['rola'];
             $_SESSION['imie']     = $u['imie'];
@@ -63,8 +60,13 @@ function wymagaj_logowania(): array
     }
     return $u;
 }
+function tylko_dla_gosci(): void
+{
+    if ($u = aktualny_uzytkownik()) {
+        redirect(panel_roli($u['rola']));
+    }
+}
 
-// Wpuszcza tylko podane role. Reszta dostaje 403, także przy ręcznym wpisaniu adresu URL.
 function wymagaj_roli(string ...$role): array
 {
     $u = wymagaj_logowania();
@@ -81,15 +83,12 @@ function wymagaj_roli(string ...$role): array
     return $u;
 }
 
-// Logowanie. Zwraca ['ok' => true, 'rola' => ...] albo ['blad' => 'komunikat'].
 function zaloguj(string $email, string $haslo): array
 {
-    $blad = 'Nieprawidłowy e-mail lub hasło.';   // jeden komunikat, żeby nie zdradzać, czy e-mail istnieje
+    $blad = 'Nieprawidłowy e-mail lub hasło.';   
 
     $st = db()->prepare(
-        'SELECT id, imie, nazwisko, haslo, rola, aktywne, nieudane_proby,
-                (zablokowany_do IS NOT NULL AND zablokowany_do > NOW()) AS zablokowane,
-                TIMESTAMPDIFF(SECOND, NOW(), zablokowany_do) AS sekundy
+        'SELECT id, imie, nazwisko, haslo, rola, aktywne, nieudane_proby, zablokowany_do, wersja_sesji
          FROM uzytkownicy WHERE email = ?'
     );
     $st->execute([$email]);
@@ -100,16 +99,17 @@ function zaloguj(string $email, string $haslo): array
         return ['blad' => $blad];
     }
 
-    if ($u['zablokowane']) {
-        $min = max(1, (int) ceil($u['sekundy'] / 60));
+   
+    $blokadaDo = $u['zablokowany_do'] ? (int) strtotime($u['zablokowany_do']) : 0;
+    if ($blokadaDo > time()) {
+        $min = max(1, (int) ceil(($blokadaDo - time()) / 60));
         return ['blad' => "Konto jest tymczasowo zablokowane po zbyt wielu błędnych próbach. Spróbuj za około {$min} min."];
     }
 
     if (!password_verify($haslo, $u['haslo'])) {
         if ($u['nieudane_proby'] + 1 >= MAX_PROB) {
-            $sql = 'UPDATE uzytkownicy SET nieudane_proby = 0,
-                    zablokowany_do = DATE_ADD(NOW(), INTERVAL ' . BLOKADA_MIN . ' MINUTE) WHERE id = ?';
-            db()->prepare($sql)->execute([$u['id']]);
+            db()->prepare('UPDATE uzytkownicy SET nieudane_proby = 0, zablokowany_do = ? WHERE id = ?')
+                ->execute([date('Y-m-d H:i:s', time() + BLOKADA_MIN * 60), $u['id']]);
         } else {
             db()->prepare('UPDATE uzytkownicy SET nieudane_proby = nieudane_proby + 1 WHERE id = ?')
                 ->execute([$u['id']]);
@@ -121,7 +121,7 @@ function zaloguj(string $email, string $haslo): array
         return ['blad' => 'To konto jest nieaktywne. Skontaktuj się z obsługą.'];
     }
 
-    // Hasło poprawne: zerujemy licznik prób i ewentualnie odświeżamy hash do aktualnego algorytmu.
+    
     db()->prepare('UPDATE uzytkownicy SET nieudane_proby = 0, zablokowany_do = NULL WHERE id = ?')
         ->execute([$u['id']]);
     if (password_needs_rehash($u['haslo'], PASSWORD_DEFAULT)) {
@@ -129,13 +129,29 @@ function zaloguj(string $email, string $haslo): array
             ->execute([password_hash($haslo, PASSWORD_DEFAULT), $u['id']]);
     }
 
-    session_regenerate_id(true);   // nowy identyfikator po zalogowaniu chroni przed session fixation
+    session_regenerate_id(true);  
     $_SESSION = [
         'uid'      => (int) $u['id'],
+        'wersja'   => (int) $u['wersja_sesji'],
         'rola'     => $u['rola'],
         'imie'     => $u['imie'],
         'nazwisko' => $u['nazwisko'],
         'ostatnia' => time(),
     ];
-    return ['ok' => true, 'rola' => $u['rola']];
+    return ['ok' => true, 'rola' => $u['rola'], 'imie' => $u['imie']];
+}
+function uniewaznij_sesje(int $idUzytkownika): int
+{
+    db()->prepare('UPDATE uzytkownicy SET wersja_sesji = wersja_sesji + 1 WHERE id = ?')
+        ->execute([$idUzytkownika]);
+    $st = db()->prepare('SELECT wersja_sesji FROM uzytkownicy WHERE id = ?');
+    $st->execute([$idUzytkownika]);
+    return (int) $st->fetchColumn();
+}
+
+function zmien_haslo(int $idUzytkownika, string $noweHaslo): int
+{
+    db()->prepare('UPDATE uzytkownicy SET haslo = ?, nieudane_proby = 0, zablokowany_do = NULL WHERE id = ?')
+        ->execute([password_hash($noweHaslo, PASSWORD_DEFAULT), $idUzytkownika]);
+    return uniewaznij_sesje($idUzytkownika);
 }
